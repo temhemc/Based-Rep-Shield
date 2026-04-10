@@ -52,6 +52,7 @@ export default function Home() {
   }, [isConnected, address, chainId]);
 
   return (
+   <meta name="talentapp:project_verification" content="7dce36405144977ee058bf2b066b671e4159a051a7701606fc5b883ebee079569352c17454ed11274714ed2bfd1a4601ee1c325d7e1a611bd7ac21677146cc11">
     <main className="min-h-screen bg-[#0052FF] text-white flex flex-col items-center justify-center p-6 font-sans select-none">
       <div className="bg-black/20 p-10 rounded-[40px] border border-white/10 backdrop-blur-2xl max-w-xl w-full text-center shadow-2xl">
         <div className="text-6xl mb-4 drop-shadow-xl">🛡️</div>
