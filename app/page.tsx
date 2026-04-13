@@ -23,7 +23,7 @@ export default function Home() {
   const MASTER_BUILDER = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
 
   // Etherscan API Key (BaseScan key'in de burada çalışır)
-  const API_KEY = "JXM2JB7NMCPP3V7PU9Q6TPC5XTIKYVRW4K";   // ← Kendi key'ini buraya yapıştır
+  const API_KEY = "VNEY2MDV5D165EEGKVXI3NVRQFX5SN9TDE";   // ← Kendi key'ini buraya yapıştır
 
   useEffect(() => {
     setMounted(true);
