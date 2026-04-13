@@ -23,7 +23,7 @@ export default function Home() {
   const MASTER_BUILDER = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
 
   // Etherscan API Key (BaseScan key'in de burada çalışır)
-  const API_KEY = "JXM2JB7NMCPP3V7PU9Q6TPC5XTIKYVRW4K";   // ← Burayı kendi key'inle değiştir
+  const API_KEY = "JXM2JB7NMCPP3V7PU9Q6TPC5XTIKYVRW4K";   // ← Kendi key'ini buraya yapıştır
 
   useEffect(() => {
     setMounted(true);
@@ -55,9 +55,9 @@ export default function Home() {
         return;
       }
 
-      // ✅ Yeni Etherscan V2 API + Base chainid=8453
+      // ✅ DÜZELTİLDİ: offset=10000 → Artık 10.000 işlem çekiyor (senin 1400 tx'ini tam görecek)
       try {
-        const url = `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=100&sort=desc&apikey=${API_KEY}`;
+        const url = `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=10000&sort=desc&apikey=${API_KEY}`;
 
         const res = await fetch(url);
         const data = await res.json();
@@ -66,6 +66,7 @@ export default function Home() {
           const txList = data.result;
           const txCount = txList.length;
 
+          // Contract deploy tespiti (eski tx'ler de dahil)
           const deploys = txList.filter((tx: any) => 
             !tx.to || tx.to === "" || tx.contractAddress
           ).length;
@@ -80,25 +81,11 @@ export default function Home() {
           });
         } else {
           console.warn("API Response:", data.message || data);
-          setStats({
-            score: 30,
-            txCount: 5,
-            contractDeploys: 0,
-            nftTxs: 2,
-            tokensCreated: 0,
-            isMaster: false
-          });
+          setStats({ score: 30, txCount: 5, contractDeploys: 0, nftTxs: 2, tokensCreated: 0, isMaster: false });
         }
       } catch (error) {
         console.error("API fetch error:", error);
-        setStats({
-          score: 25,
-          txCount: 2,
-          contractDeploys: 0,
-          nftTxs: 0,
-          tokensCreated: 0,
-          isMaster: false
-        });
+        setStats({ score: 25, txCount: 2, contractDeploys: 0, nftTxs: 0, tokensCreated: 0, isMaster: false });
       } finally {
         setLoading(false);
       }
@@ -137,7 +124,7 @@ export default function Home() {
               <div className="py-20 flex flex-col items-center gap-4">
                 <Activity className="animate-spin text-white/50" size={48} />
                 <p className="text-white/40 font-bold animate-pulse text-xs uppercase tracking-widest">
-                  Base verileri çekiliyor... {address?.slice(0,6)}...{address?.slice(-4)}
+                  Tüm Base işlemleri çekiliyor... ({address?.slice(0,6)}...{address?.slice(-4)})
                 </p>
               </div>
             ) : (
@@ -179,7 +166,7 @@ export default function Home() {
 
         <div className="mt-8 pt-6 border-t border-white/5 flex justify-between text-[9px] text-white/20 font-black uppercase tracking-[0.3em]">
           <span>Base Ecosystem • Etherscan V2</span>
-          <span>V3.3.0</span>
+          <span>V3.3.1</span>
         </div>
       </div>
     </main>
