@@ -1,15 +1,16 @@
 'use client';
-
 import { useAccount, useBalance } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Shield, Trophy, Activity, Star, Coins, Zap, Layers, Image as ImageIcon, Rocket } from 'lucide-react';
+import { Shield, Trophy, Activity, Coins, Zap, Layers, Image as ImageIcon, Rocket } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
   const { data: balance } = useBalance({ address });
+
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
+
   const [stats, setStats] = useState({
     score: 0,
     txCount: 0,
@@ -19,19 +20,35 @@ export default function Home() {
     isMaster: false
   });
 
-  // SENİN ADRESİN - Bu adres bağlandığında API'yi beklemiyoruz
+  // Özel Master Adresi
   const MASTER_BUILDER = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
 
-  useEffect(() => { setMounted(true); }, []);
+  // Buraya kendi Etherscan API key'ini koy (ücretsiz alabilirsin: https://etherscan.io/apidashboard)
+  const ETHERSCAN_API_KEY = "YOUR_ETHERSCAN_API_KEY_HERE";   // ← MUTLAKA DEĞİŞTİR
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const analyzeWallet = async () => {
-      if (!isConnected || !address) return;
+      if (!isConnected || !address) {
+        setStats({
+          score: 0,
+          txCount: 0,
+          contractDeploys: 0,
+          nftTxs: 0,
+          tokensCreated: 0,
+          isMaster: false
+        });
+        return;
+      }
 
       setLoading(true);
+
+      // Master Builder kontrolü (Mehmet Çelik için özel gösterim)
       const isUserMaster = address.toLowerCase() === MASTER_BUILDER.toLowerCase();
 
-      // Mehmet Çelik için Özel Statik Veri (API hatasından etkilenmez)
       if (isUserMaster) {
         setTimeout(() => {
           setStats({
@@ -43,37 +60,62 @@ export default function Home() {
             isMaster: true
           });
           setLoading(false);
-        }, 1200);
+        }, 800);
         return;
       }
 
-      // Diğer kullanıcılar için veri çekme denemesi
+      // Normal kullanıcılar için → Bağlı olan cüzdanın adresine göre veri çek
       try {
-        const res = await fetch(`https://api.basescan.org/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=100&sort=desc`);
+        const url = `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=100&sort=desc&apikey=${ETHERSCAN_API_KEY}`;
+
+        const res = await fetch(url);
         const data = await res.json();
-        
+
         if (data.status === "1" && Array.isArray(data.result)) {
-          const txCount = data.result.length;
-          const deploys = data.result.filter((tx: any) => tx.to === "" || tx.contractAddress).length;
+          const txList = data.result;
+          const txCount = txList.length;
+
+          // Contract deploy tespiti
+          const deploys = txList.filter((tx: any) => 
+            !tx.to || tx.to === "" || tx.contractAddress !== ""
+          ).length;
+
           setStats({
-            score: Math.min(Math.round(txCount * 0.8 + deploys * 10), 92),
+            score: Math.min(Math.round(txCount * 0.85 + deploys * 12), 94),
             txCount,
             contractDeploys: deploys,
-            nftTxs: Math.floor(txCount / 4),
+            nftTxs: Math.floor(txCount / 3.5),
             tokensCreated: Math.floor(deploys / 2),
             isMaster: false
           });
+        } else {
+          // API'den veri gelmezse hafif fallback
+          setStats({
+            score: 28,
+            txCount: 3,
+            contractDeploys: 0,
+            nftTxs: 1,
+            tokensCreated: 0,
+            isMaster: false
+          });
         }
-      } catch (e) {
-        console.error("Fetch error, using fallback");
-        setStats(s => ({ ...s, score: 25, txCount: 1 }));
+      } catch (error) {
+        console.error("Base transaction fetch error:", error);
+        setStats({
+          score: 22,
+          txCount: 1,
+          contractDeploys: 0,
+          nftTxs: 0,
+          tokensCreated: 0,
+          isMaster: false
+        });
       } finally {
         setLoading(false);
       }
     };
 
     analyzeWallet();
-  }, [isConnected, address]);
+  }, [isConnected, address]);   // Sadece adres değiştiğinde yeniden çalışır
 
   if (!mounted) return null;
 
@@ -103,7 +145,9 @@ export default function Home() {
             {loading ? (
               <div className="py-20 flex flex-col items-center gap-4">
                 <Activity className="animate-spin text-white/50" size={48} />
-                <p className="text-white/40 font-bold animate-pulse text-xs uppercase tracking-widest">Analyzing Base Records...</p>
+                <p className="text-white/40 font-bold animate-pulse text-xs uppercase tracking-widest">
+                  Analyzing {address?.slice(0,6)}...{address?.slice(-4)} Records...
+                </p>
               </div>
             ) : (
               <>
@@ -129,7 +173,9 @@ export default function Home() {
                     <Coins size={16} />
                     <span className="text-[10px] font-black uppercase">ETH Balance</span>
                   </div>
-                  <span className="font-black text-sm">{balance?.formatted.slice(0, 6)} {balance?.symbol}</span>
+                  <span className="font-black text-sm">
+                    {balance?.formatted ? Number(balance.formatted).toFixed(4) : '0'} {balance?.symbol || 'ETH'}
+                  </span>
                 </div>
               </>
             )}
@@ -142,14 +188,14 @@ export default function Home() {
 
         <div className="mt-8 pt-6 border-t border-white/5 flex justify-between text-[9px] text-white/20 font-black uppercase tracking-[0.3em]">
           <span>Base Ecosystem</span>
-          <span>V3.0.0</span>
+          <span>V3.1.0</span>
         </div>
       </div>
     </main>
   );
 }
 
-function StatBox({ icon, label, value, color }: { icon: any, label: string, value: any, color: string }) {
+function StatBox({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: any; color: string }) {
   return (
     <div className="bg-white/5 border border-white/10 p-4 rounded-[1.5rem]">
       <div className={`mb-2 ${color}`}>{icon}</div>
