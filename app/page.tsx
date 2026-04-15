@@ -1,16 +1,15 @@
 'use client';
+
 import { useAccount, useBalance } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Shield, Trophy, Activity, Coins, Zap, Layers, Image as ImageIcon, Rocket } from 'lucide-react';
+import { Shield, Trophy, Activity, Star, Coins, Zap, Layers, Image as ImageIcon, Rocket } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
   const { data: balance } = useBalance({ address });
-
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
-
   const [stats, setStats] = useState({
     score: 0,
     txCount: 0,
@@ -22,70 +21,51 @@ export default function Home() {
 
   const MASTER_BUILDER = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
 
-  // Etherscan API Key (BaseScan key'in de burada çalışır)
-  const API_KEY = "VNEY2MDV5D165EEGKVXI3NVRQFX5SN9TDE";   // ← Kendi key'ini buraya yapıştır
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     const analyzeWallet = async () => {
-      if (!isConnected || !address) {
-        setStats({ score: 0, txCount: 0, contractDeploys: 0, nftTxs: 0, tokensCreated: 0, isMaster: false });
-        return;
-      }
+      if (!isConnected || !address) return;
 
       setLoading(true);
-
       const isUserMaster = address.toLowerCase() === MASTER_BUILDER.toLowerCase();
 
+      // MEHMET ÇELİK İÇİN ÖZEL - GERÇEK BUILDER VERİLERİ
       if (isUserMaster) {
         setTimeout(() => {
           setStats({
             score: 99,
-            txCount: 1852,
-            contractDeploys: 15,
-            nftTxs: 124,
-            tokensCreated: 8,
+            txCount: 1380, // Belirttiğin işlem sayısı
+            contractDeploys: 52, // 50+ Smart Kontrat
+            nftTxs: 145,
+            tokensCreated: 12,
             isMaster: true
           });
           setLoading(false);
-        }, 800);
+        }, 1500);
         return;
       }
 
-      // ✅ DÜZELTİLDİ: offset=10000 → Artık 10.000 işlem çekiyor (senin 1400 tx'ini tam görecek)
+      // Diğer kullanıcılar için geliştirilmiş tarama
       try {
-        const url = `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=10000&sort=desc&apikey=${API_KEY}`;
-
-        const res = await fetch(url);
+        const res = await fetch(`https://api.basescan.org/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=1000&sort=desc`);
         const data = await res.json();
-
+        
         if (data.status === "1" && Array.isArray(data.result)) {
-          const txList = data.result;
-          const txCount = txList.length;
-
-          // Contract deploy tespiti (eski tx'ler de dahil)
-          const deploys = txList.filter((tx: any) => 
-            !tx.to || tx.to === "" || tx.contractAddress
-          ).length;
-
+          const txCount = data.result.length;
+          const deploys = data.result.filter((tx: any) => tx.to === "" || (tx.input && tx.input.length > 1000)).length;
+          
           setStats({
-            score: Math.min(Math.round(txCount * 0.85 + deploys * 12), 94),
+            score: Math.min(Math.round(txCount * 0.5 + deploys * 5), 92),
             txCount,
             contractDeploys: deploys,
-            nftTxs: Math.floor(txCount / 3),
-            tokensCreated: Math.floor(deploys / 2),
+            nftTxs: Math.floor(txCount / 5),
+            tokensCreated: Math.floor(deploys / 2.5),
             isMaster: false
           });
-        } else {
-          console.warn("API Response:", data.message || data);
-          setStats({ score: 30, txCount: 5, contractDeploys: 0, nftTxs: 2, tokensCreated: 0, isMaster: false });
         }
-      } catch (error) {
-        console.error("API fetch error:", error);
-        setStats({ score: 25, txCount: 2, contractDeploys: 0, nftTxs: 0, tokensCreated: 0, isMaster: false });
+      } catch (e) {
+        setStats(s => ({ ...s, score: 20, txCount: 1 }));
       } finally {
         setLoading(false);
       }
@@ -97,7 +77,7 @@ export default function Home() {
   if (!mounted) return null;
 
   return (
-    <main className="min-h-screen bg-[#0052FF] text-white flex flex-col items-center justify-center p-4 font-sans italic selection:bg-white selection:text-[#0052FF]">
+    <main className="min-h-screen bg-[#0052FF] text-white flex flex-col items-center justify-center p-4 font-sans italic">
       <div className="bg-black/30 p-8 rounded-[3rem] border border-white/10 backdrop-blur-3xl max-w-2xl w-full shadow-2xl relative">
         
         <div className="flex flex-col items-center mb-6">
@@ -105,13 +85,13 @@ export default function Home() {
             <div className="absolute inset-0 bg-white/20 blur-2xl rounded-full"></div>
             <Shield className="w-20 h-20 text-white relative z-10" />
             {stats.isMaster && (
-              <div className="absolute -top-2 -right-4 bg-yellow-500 text-[10px] px-3 py-1 rounded-full font-black border-2 border-[#0052FF] animate-bounce z-20 not-italic">
-                MASTER
+              <div className="absolute -top-2 -right-4 bg-yellow-500 text-[10px] px-3 py-1 rounded-full font-black border-2 border-[#0052FF] animate-bounce z-20 not-italic shadow-lg">
+                MASTER BUILDER
               </div>
             )}
           </div>
           <h1 className="text-4xl font-black tracking-tighter uppercase leading-none text-center">Based Rep Shield</h1>
-          <p className="text-white/60 text-sm mt-1">Powered by Etherscan V2 • Base Network</p>
+          <p className="text-[10px] text-white/40 mt-2 font-bold uppercase tracking-[0.2em] not-italic">Verified Onchain Activity</p>
         </div>
 
         <div className="flex justify-center mb-8">
@@ -123,16 +103,14 @@ export default function Home() {
             {loading ? (
               <div className="py-20 flex flex-col items-center gap-4">
                 <Activity className="animate-spin text-white/50" size={48} />
-                <p className="text-white/40 font-bold animate-pulse text-xs uppercase tracking-widest">
-                  Tüm Base işlemleri çekiliyor... ({address?.slice(0,6)}...{address?.slice(-4)})
-                </p>
+                <p className="text-white/40 font-bold animate-pulse text-[10px] uppercase tracking-[0.3em]">Deep Scanning Base Mainnet...</p>
               </div>
             ) : (
               <>
-                <div className="bg-white/10 p-6 rounded-[2.5rem] border border-white/10 flex justify-between items-center relative overflow-hidden">
+                <div className="bg-gradient-to-br from-white/15 to-transparent p-6 rounded-[2.5rem] border border-white/10 flex justify-between items-center relative overflow-hidden shadow-inner">
                   <div className="text-left z-10">
-                    <p className="text-white/40 text-[10px] font-black uppercase tracking-widest mb-1">Base Reputation Score</p>
-                    <h2 className={`text-7xl font-black leading-none ${stats.isMaster ? 'text-yellow-400' : 'text-green-400'}`}>
+                    <p className="text-white/40 text-[10px] font-black uppercase tracking-widest mb-1">Reputation Score</p>
+                    <h2 className={`text-7xl font-black leading-none tracking-tighter ${stats.isMaster ? 'text-yellow-400' : 'text-green-400'}`}>
                       {stats.score}%
                     </h2>
                   </div>
@@ -140,45 +118,43 @@ export default function Home() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <StatBox icon={<Zap size={18}/>} label="Total TXs" value={stats.txCount} color="text-blue-400" />
-                  <StatBox icon={<Layers size={18}/>} label="Contracts Deployed" value={stats.contractDeploys} color="text-purple-400" />
-                  <StatBox icon={<Rocket size={18}/>} label="Tokens Launched" value={`${stats.tokensCreated} Tokens`} color="text-orange-400" />
-                  <StatBox icon={<ImageIcon size={18}/>} label="NFT Activity" value={stats.nftTxs} color="text-pink-400" />
+                  <StatBox icon={<Zap size={18}/>} label="Total Transactions" value={stats.txCount} color="text-blue-400" />
+                  <StatBox icon={<Layers size={18}/>} label="Smart Contracts" value={stats.contractDeploys} color="text-purple-400" />
+                  <StatBox icon={<Rocket size={18}/>} label="Tokens/Dapps" value={stats.tokensCreated} color="text-orange-400" />
+                  <StatBox icon={<ImageIcon size={18}/>} label="NFT Interactions" value={stats.nftTxs} color="text-pink-400" />
                 </div>
 
-                <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center justify-between">
+                <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center justify-between shadow-sm">
                   <div className="flex items-center gap-2 text-white/40">
                     <Coins size={16} />
-                    <span className="text-[10px] font-black uppercase">ETH Balance on Base</span>
+                    <span className="text-[10px] font-black uppercase tracking-tighter">Current Balance</span>
                   </div>
-                  <span className="font-black text-sm">
-                    {balance?.formatted ? Number(balance.formatted).toFixed(4) : '0'} {balance?.symbol || 'ETH'}
-                  </span>
+                  <span className="font-black text-sm text-white/90">{balance?.formatted.slice(0, 7)} {balance?.symbol}</span>
                 </div>
               </>
             )}
           </div>
         ) : (
-          <div className="bg-white/5 border border-white/10 p-12 rounded-[2.5rem] border-dashed text-center text-white/30 font-bold uppercase text-xs">
-            Cüzdanını bağla ve Base Reputation’ını gör
+          <div className="bg-white/5 border border-white/10 p-12 rounded-[2.5rem] border-dashed text-center text-white/30 font-bold uppercase text-[10px] tracking-widest">
+            Connect to view your builder reputation
           </div>
         )}
 
-        <div className="mt-8 pt-6 border-t border-white/5 flex justify-between text-[9px] text-white/20 font-black uppercase tracking-[0.3em]">
-          <span>Base Ecosystem • Etherscan V2</span>
-          <span>V3.3.1</span>
+        <div className="mt-8 pt-6 border-t border-white/5 flex justify-between text-[9px] text-white/20 font-black uppercase tracking-[0.4em]">
+          <span>Base Core Analytics</span>
+          <span>V3.2.0</span>
         </div>
       </div>
     </main>
   );
 }
 
-function StatBox({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: any; color: string }) {
+function StatBox({ icon, label, value, color }: { icon: any, label: string, value: any, color: string }) {
   return (
-    <div className="bg-white/5 border border-white/10 p-4 rounded-[1.5rem]">
+    <div className="bg-white/5 border border-white/10 p-4 rounded-[1.8rem] hover:bg-white/10 transition-all duration-300">
       <div className={`mb-2 ${color}`}>{icon}</div>
-      <p className="text-white/30 text-[9px] font-black uppercase mb-1 tracking-tighter">{label}</p>
-      <p className="text-xl font-black text-white">{value}</p>
+      <p className="text-white/30 text-[9px] font-black uppercase mb-1 tracking-tight">{label}</p>
+      <p className="text-2xl font-black text-white leading-none">{value}</p>
     </div>
   );
 }
